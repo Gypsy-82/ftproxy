@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+
+# vendored helper binaries (fetched per-platform by ./install.sh)
+vendor/
+
+# logs & OS cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# secrets & keys — never commit
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# build / bundle artifacts
+*.tar.gz
+*.tgz
+
+# runtime-generated configs (the tool writes these to a temp dir; ignore just in case)
+Caddyfile.local
+
+# saved chat-color preference
+.ftproxy.json
+
+# editor / merge / partial-download cruft (keeps stray copies of source out)
+*.part
+*.orig
+*.rej
+*.swp
+*~
+.vscode/
+.idea/
+
+# runtime temp files the tool writes (normally in /tmp, ignored here just in case)
+ftproxy-Caddyfile-*
+ftproxy-caddy-*.log
+
+# assistant / session files (backstop; these should never be in the folder)
+CLAUDE.md
+.claude/
+AGENTS.md
+handoff.md
+history.md

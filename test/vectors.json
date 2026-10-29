@@ -1,0 +1,29 @@
+{
+  "ikmHex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "chunks": [
+    {
+      "dir": 1,
+      "index": 0,
+      "isLast": false,
+      "fileId": "ARIjNEVWZ3iJmqu8zd7vAA",
+      "plaintext": "hello, guest",
+      "frame": "010112233445566778899aabbccddeef000000000000ea188643ca527bdf3ce964bd5730dc2e76b51829cf43be681cb4c1b2"
+    },
+    {
+      "dir": 1,
+      "index": 7,
+      "isLast": true,
+      "fileId": "ARIjNEVWZ3iJmqu8zd7vAA",
+      "plaintext": "",
+      "frame": "010112233445566778899aabbccddeef000000000701059e51a666bf3a9415fae532926110c9"
+    },
+    {
+      "dir": 2,
+      "index": 0,
+      "isLast": true,
+      "fileId": "AhMkNUZXaHmKm6y9zt_wAQ",
+      "plaintext": "guest to host é",
+      "frame": "0102132435465768798a9bacbdcedff0010000000001a171db421cdf77b8b754dceb376738cdb01cb93ca10f44dd05690530bfe72f02"
+    }
+  ]
+}

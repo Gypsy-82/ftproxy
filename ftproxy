@@ -1,0 +1,5 @@
+#!/bin/sh
+# Prefer the private Node that ./install.sh may have put in ./vendor.
+d="$(dirname "$0")"
+if [ -x "$d/vendor/node/bin/node" ]; then exec "$d/vendor/node/bin/node" "$d/bin/ftproxy.js" "$@"; fi
+exec node "$d/bin/ftproxy.js" "$@"

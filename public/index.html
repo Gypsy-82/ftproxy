@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="color-scheme" content="dark light" />
+<title>Private Transfer</title>
+<style>
+  :root {
+    --bg: #0a0d0b; --bg-2: #0f1512; --panel: #121a15; --line: #1e2b23; --line-2: #2a3b31;
+    --ink: #e8f3ec; --muted: #8fa398; --accent: #34d399; --accent-2: #10b981; --accent-ink: #04120c;
+    --peer: #a78bfa; --peer-2: #8b5cf6; --peer-ink: #0b0713; --me: #f4f5f7; --me-ink: #15171e;
+    --danger: #f87171; --danger-ink: #1a0606; --warn: #fbbf24; --focus: #34d399;
+    --radius: 16px; --shadow: 0 10px 40px rgba(0,0,0,.45);
+    --glow-a: rgba(52,211,153,.10); --glow-b: rgba(167,139,250,.12);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f3f6f4; --bg-2: #ffffff; --panel: #ffffff; --line: #d7e1db; --line-2: #c3d1c8;
+      --ink: #0f1d16; --muted: #4a5d52; --accent: #047857; --accent-2: #065f46; --accent-ink: #ffffff;
+      --peer: #6d28d9; --peer-2: #5b21b6; --peer-ink: #ffffff; --me: #e8ece9; --me-ink: #0f1d16;
+      --danger: #b91c1c; --danger-ink: #ffffff; --warn: #92400e; --focus: #047857;
+      --shadow: 0 10px 30px rgba(15,29,22,.10); --glow-a: rgba(4,120,87,.06); --glow-b: rgba(109,40,217,.06);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink); background-color: var(--bg);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-image: radial-gradient(1200px 600px at 15% -10%, var(--glow-a), transparent 60%),
+                      radial-gradient(1000px 600px at 110% 10%, var(--glow-b), transparent 55%);
+    -webkit-font-smoothing: antialiased; padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .wrap { min-height: 100dvh; display: grid; place-items: center; padding: 20px; }
+  svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  button { font: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  /* notice */
+  .card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px 26px 26px; text-align: center; }
+  .card[hidden] { display: none; }
+  .badge { width: 64px; height: 64px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 18px; color: var(--danger); border: 1px solid var(--line); background: var(--bg-2); }
+  .badge svg.i { width: 32px; height: 32px; }
+  h1 { margin: 0 0 6px; font-size: 22px; }
+  .sub { margin: 0; color: var(--muted); font-size: 15px; }
+  .note { margin-top: 18px; font-size: 13px; color: var(--muted); }
+
+  /* shell */
+  .chat { display: none; width: min(600px, 100%); height: min(86dvh, 780px); position: relative;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+    grid-template-rows: auto auto 1fr auto; overflow: hidden; }
+  .chat.open { display: grid; }
+  .alarm-banner { display: none; background: var(--danger); color: var(--danger-ink); font-weight: 800; text-align: center; padding: 10px 12px; font-size: 14px; letter-spacing: .4px; }
+  .alarm-banner.show { display: block; }
+  .chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-bottom: 1px solid var(--line); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.on { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+  .title { font-weight: 650; font-size: 16px; }
+  .status { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .keyind { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px; background: transparent; border: 0; border-radius: 10px; cursor: pointer; color: var(--muted); }
+  .keyind:hover { background: var(--bg-2); }
+  .keyind.verified { color: var(--accent); }
+  .keyind.alarm { color: var(--danger); }
+  .keyind .lbl { font-size: 13px; }
+
+  .stream { padding: 16px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; }
+  .row.me { justify-content: flex-end; }
+  .bubble { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .me .bubble { background: var(--me); color: var(--me-ink); border-bottom-right-radius: 5px; }
+  .peer .bubble { background: var(--peer); color: var(--peer-ink); border-bottom-left-radius: 5px; }
+  .sys { text-align: center; color: var(--muted); font-size: 13px; padding: 2px 4px; }
+
+  /* file cards */
+  .fcard { width: min(100%, 420px); border: 1px solid var(--line-2); border-radius: 14px; background: var(--bg-2); padding: 14px; display: grid; gap: 10px; }
+  .row.me .fcard { border-color: color-mix(in srgb, var(--accent) 35%, var(--line-2)); }
+  .fhead { display: flex; gap: 12px; align-items: flex-start; }
+  .ficon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--panel); border: 1px solid var(--line); color: var(--accent); }
+  .ficon svg.i { width: 22px; height: 22px; }
+  .fname { font-weight: 650; overflow-wrap: anywhere; line-height: 1.35; }
+  .fmeta { font-size: 13px; color: var(--muted); }
+  .fmeta code { font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--muted); margin-top: 4px; }
+  .fwarn { font-size: 13px; color: var(--warn); }
+  .ferr { font-size: 14px; color: var(--danger); }
+  .fok { font-size: 14px; color: var(--accent); display: flex; gap: 6px; align-items: center; }
+  .bar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent), var(--peer)); transform-origin: 0 50%; transform: scaleX(0); transition: transform .2s ease; }
+  .fprog { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--panel); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 15px; transition: transform .15s ease, background .15s ease; }
+  .btn:hover { background: var(--bg); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { background: var(--accent-2); }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+  .check { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; cursor: pointer; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .preview { max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--line); justify-self: start; }
+
+  /* composer */
+  .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); align-items: flex-end; }
+  .composer textarea { flex: 1; resize: none; height: 48px; min-height: 48px; max-height: 120px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--bg); color: var(--ink); padding: 12px 14px; font: inherit; line-height: 1.4; }
+  .composer textarea:focus { border-color: var(--focus); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 25%, transparent); }
+  .icon-btn { flex: 0 0 48px; width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; cursor: pointer; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--ink); }
+  .icon-btn.primary { border: 0; background: var(--accent); color: var(--accent-ink); }
+  .icon-btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+  .drop { position: absolute; inset: 0; display: none; place-items: center; z-index: 20; text-align: center; padding: 24px;
+    background: color-mix(in srgb, var(--panel) 88%, transparent); border: 2px dashed var(--accent); border-radius: var(--radius); color: var(--ink); font-weight: 650; }
+  .drop.show { display: grid; }
+  .drop svg.i { width: 40px; height: 40px; color: var(--accent); margin: 0 auto 8px; display: block; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: grid; place-items: center; padding: 20px; z-index: 50; }
+  .modal[hidden] { display: none; }
+  .modal-card { width: min(340px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; text-align: center; box-shadow: var(--shadow); }
+  .modal-card h2 { margin: 0 0 6px; font-size: 18px; }
+  .modal-code { font: 700 26px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 3px; color: var(--accent); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 16px 12px; margin: 14px 0; }
+  .modal-card .btn { width: 100%; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+  @media (max-width: 640px) {
+    .wrap { padding: 0; }
+    .chat { width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; border: 0; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<svg hidden aria-hidden="true">
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+</svg>
+
+<div class="wrap">
+  <main class="card" id="notice" role="alert" hidden>
+    <div class="badge" aria-hidden="true"><svg class="i"><use href="#i-alert"/></svg></div>
+    <h1 id="noticeTitle">Link didn't open</h1>
+    <p class="sub" id="noticeBody">Something went wrong.</p>
+    <p class="note">End-to-end encrypted · one person · nothing is stored.</p>
+  </main>
+
+  <section class="chat" id="chat" aria-label="Private transfer">
+    <div class="alarm-banner" id="alarm" role="alert">KEYS CHANGED — this session is self-destructing</div>
+    <header class="chat-head">
+      <span class="dot" id="peerDot" aria-hidden="true"></span>
+      <span class="title">Private transfer</span>
+      <span class="status" id="peerStatus">connecting…</span>
+      <button class="keyind" id="keyIcon" type="button" aria-haspopup="dialog" aria-label="Compare safety code">
+        <svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span class="lbl" id="keyLbl">compare</span>
+      </button>
+    </header>
+    <div class="stream" id="stream"></div>
+    <form class="composer" id="composer">
+      <button class="icon-btn" id="attach" type="button" aria-label="Send a file (txt, png, jpg, mp4, pdf — up to 500 MiB)" disabled>
+        <svg class="i" aria-hidden="true"><use href="#i-clip"/></svg>
+      </button>
+      <input type="file" id="picker" class="sr" tabindex="-1" aria-hidden="true" accept=".txt,.png,.jpg,.jpeg,.mp4,.pdf,text/plain,image/png,image/jpeg,video/mp4,application/pdf" />
+      <textarea id="msg" rows="1" placeholder="Message…" aria-label="Message" autocomplete="off" disabled></textarea>
+      <button class="icon-btn primary" id="sendBtn" type="submit" aria-label="Send message"><svg class="i" aria-hidden="true"><use href="#i-send"/></svg></button>
+    </form>
+    <div class="drop" id="drop" aria-hidden="true"><div><svg class="i"><use href="#i-up"/></svg>Drop to offer this file</div></div>
+    <div class="sr" id="live" aria-live="polite"></div>
+  </section>
+
+  <div class="modal" id="keyModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="kmTitle">
+      <h2 id="kmTitle">Compare your safety code</h2>
+      <p class="sub">Read this to the other person. It must match their screen exactly.</p>
+      <div class="modal-code" id="kmCode">••••-••••</div>
+      <p class="sub">If it differs, someone may be in the middle — stop and send nothing.</p>
+      <button class="btn primary" id="kmClose" type="button">Got it</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*@@SHARED@@*/
+// ======================================================================
+// Page glue. Everything above this line is src/shared/*.js, inlined
+// verbatim by src/page.js — the same bytes the Node tests run.
+// ======================================================================
+"use strict";
+(function () {
+const { 'stream-crypto': SC, filetype: FT, names: NM, exif: EX, sha256: SHA, engine: ENG } = globalThis.TX;
+const te = new TextEncoder();
+
+// ---- session crypto (mirrors src/crypto.js — covered by test/browser.test.js) ----
+const HKDF_INFO = 'transfer-session-v1';
+async function deriveKeys(secret, salt) {
+  const base = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveBits']);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info: te.encode(HKDF_INFO) }, base, 512));
+  return {
+    encKey: await crypto.subtle.importKey('raw', bits.slice(0, 32), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']),
+    macKey: await crypto.subtle.importKey('raw', bits.slice(32, 64), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
+  };
+}
+async function sign(k, b) { return new Uint8Array(await crypto.subtle.sign('HMAC', k, b)); }
+async function safetyCode(k) {
+  const h = SC.toHex((await sign(k, te.encode('transfer-safety-v1'))).subarray(0, 4)).toUpperCase();
+  return h.slice(0, 4) + '-' + h.slice(4, 8);
+}
+
+// ---- dom ----
+const $ = (id) => document.getElementById(id);
+const stream = $('stream'), msgEl = $('msg'), attach = $('attach'), picker = $('picker'), live = $('live');
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function icon(name) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('class', 'i'); s.setAttribute('aria-hidden', 'true');
+  const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '#i-' + name); s.appendChild(u); return s;
+}
+function btn(label, iconName, cls, onClick) {
+  const b = el('button', 'btn' + (cls ? ' ' + cls : '')); b.type = 'button';
+  if (iconName) b.appendChild(icon(iconName));
+  b.appendChild(document.createTextNode(label)); b.addEventListener('click', onClick); return b;
+}
+function scroll() { stream.scrollTop = stream.scrollHeight; }
+function addBubble(who, text) { const r = el('div', 'row ' + who); r.appendChild(el('div', 'bubble', text)); stream.appendChild(r); scroll(); }
+function addSys(text) { stream.appendChild(el('div', 'sys', text)); scroll(); }
+function say(text) { live.textContent = text; }
+function mib(n) { return n < 1024 * 1024 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KiB' : (n / 1048576).toFixed(1) + ' MiB'; }
+const TYPE_ICON = { txt: 'text', png: 'image', jpeg: 'image', mp4: 'film', pdf: 'file' };
+const MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
+let shown = false;
+function showNotice(title, body) {
+  if (shown || !$('notice').hidden) return;
+  $('chat').classList.remove('open');
+  $('noticeTitle').textContent = title; $('noticeBody').textContent = body; $('notice').hidden = false;
+}
+function setPeer(on, text) { $('peerDot').classList.toggle('on', on); $('peerStatus').textContent = text || (on ? 'connected' : 'offline'); }
+function setEnabled(on) { msgEl.disabled = !on; attach.disabled = !on; $('sendBtn').disabled = !on; }
+
+// ---- the link secret (fragment, never sent to a server) ----
+const STORE = 'ftproxy:' + location.pathname, RT = STORE + ':rt';
+const ss = { get: (k) => { try { return sessionStorage.getItem(k) || ''; } catch { return ''; } },
+             set: (k, v) => { try { sessionStorage.setItem(k, v); } catch {} },
+             del: (k) => { try { sessionStorage.removeItem(k); } catch {} } };
+function readSecret() {
+  const h = (location.hash || '').replace(/^#/, '');
+  const m = /(?:^|&)k=([A-Za-z0-9_-]{43})(?:&|$)/.exec(h);
+  return m ? m[1] : ss.get(STORE);
+}
+function forget() { ss.del(STORE); ss.del(RT); }
+
+// ---- connection ----
+let ws = null, keys = null, engine = null, secretB64 = '', authed = false, ended = false, retryUntil = 0;
+const wsUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + location.pathname.replace(/\/$/, '') + '/ws';
+
+function connect() {
+  const sock = new WebSocket(wsUrl);
+  sock.binaryType = 'arraybuffer';
+  ws = sock;
+  let challenge = null, cn = null;
+  sock.onopen = () => { if (!authed) setPeer(false, 'securing…'); };
+  sock.onclose = (ev) => {
+    if (ws !== sock || ended) return;
+    if (authed) {
+      authed = false; setEnabled(false); setPeer(false, 'reconnecting…');
+      if (engine) engine.disconnect();
+      if (!retryUntil) retryUntil = Date.now() + 40000;   // inside the host's 45 s grace window
+    }
+    if (retryUntil && Date.now() < retryUntil && ev.code !== 4008 && ev.code !== 4003) { setTimeout(connect, 1500); return; }
+    if (shown) { setPeer(false, 'ended'); addSys('the connection is gone — this link is now closed'); return; }
+    if (ev.code === 1013) showNotice('Already open somewhere else', 'This link allows one person at a time and it is in use. Close other tabs, or ask for a fresh link.');
+    else showNotice('This link is closed', 'It was used, timed out, or shut down from the other side. Links are one-time by design — ask for a new one.');
+  };
+  sock.onmessage = async (ev) => {
+    if (typeof ev.data !== 'string') { if (authed && engine) engine.onBinary(new Uint8Array(ev.data)); return; }
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+    if (m.t === 'x') { if (authed && engine) engine.onText(m); return; }
+    if (m.t === 'ping') { if (ws === sock) sock.send('{"t":"pong"}'); return; }
+    if (m.t === 'hello') {
+      try {
+        if (!keys) keys = await deriveKeys(SC.fromB64u(secretB64), SC.fromB64u(m.salt));
+        challenge = SC.fromB64u(m.challenge);
+        cn = SC.randomBytes(16);
+        const msg = { t: 'auth', proof: SC.toB64u(await sign(keys.macKey, challenge)), cn: SC.toB64u(cn) };
+        const tk = ss.get(RT); if (tk) msg.reconnect = tk;
+        sock.send(JSON.stringify(msg));
+      } catch { showNotice('This link is damaged', 'The key in it could not be read. Ask for a fresh link.'); sock.close(); }
+    } else if (m.t === 'auth-ok') {
+      ss.set(RT, m.reconnect || '');
+      authed = true; retryUntil = 0;
+      if (!engine) await makeEngine();
+      engine.connect(SC.concat(challenge, cn));
+      enter();
+    } else if (m.t === 'auth-fail') {
+      forget(); showNotice('This link doesn’t match', 'The key it carries isn’t the one this session expects — it may have been cut short. Ask for a fresh link.');
+    } else if (m.t === 'busy') {
+      if (!shown) showNotice('Already open somewhere else', 'This link allows one person at a time and it is in use. Close other tabs, or ask for a fresh link.');
+    } else if (m.t === 'tamper') {
+      alarm(false);
+    } else if (m.t === 'destroyed') {
+      ended = true; forget(); if (engine) engine.destroy();
+      setEnabled(false); setPeer(false, 'ended'); addSys('the other side ended this session');
+    }
+  };
+}
+
+async function makeEngine() {
+  engine = new ENG.Engine({
+    role: 'guest', base: await SC.importSecret(SC.fromB64u(secretB64)), encKey: keys.encKey,
+    io: {
+      sendText(s) { if (ws && ws.readyState === 1) ws.send(s); },
+      async sendBinary(u8) {
+        const sock = ws;
+        if (!sock || sock.readyState !== 1) return false;
+        sock.send(u8);
+        while (sock.readyState === 1 && sock.bufferedAmount > 1024 * 1024) await new Promise((r) => setTimeout(r, 8));
+        return sock.readyState === 1;
+      },
+    },
+    openSink: async () => memorySink(),
+  });
+  engine.on('chat', (t) => addBubble('peer', t));
+  engine.on('offer', (v) => incomingCard(v));
+  engine.on('outgoing', (v) => outgoingCard(v));
+  engine.on('progress', (v) => cardFor(v).progress(v));
+  engine.on('state', (v) => cardFor(v).state(v));
+  engine.on('done', (v, result) => cardFor(v).done(v, result));
+  engine.on('failed', (v, why) => cardFor(v).failed(why));
+  engine.on('tamper', () => alarm(true));
+  engine.on('error', (e) => console.error(e));
+}
+
+function memorySink() {
+  let parts = [];
+  return {
+    async write(i, u8) { parts[i] = u8; },
+    async commit() { const b = new Blob(parts, { type: 'application/octet-stream' }); parts = null; return b; },
+    abort() { parts = null; },
+  };
+}
+
+async function enter() {
+  shown = true; $('notice').hidden = true; $('chat').classList.add('open');
+  setEnabled(true); setPeer(true);
+  $('keyIcon').classList.add('verified');
+  try { mySafety = await safetyCode(keys.macKey); } catch {}
+  if (!enter.once) { enter.once = true; addSys('connected — end-to-end encrypted'); msgEl.focus(); }
+}
+
+// Leaving the page (close the tab, back, navigate away) ends the session for
+// both sides now, instead of leaving a seat open that only the host's
+// heartbeat would eventually notice.
+addEventListener('pagehide', () => {
+  if (ended || !authed || !ws) return;
+  ended = true; forget();
+  try { ws.send('{"t":"bye"}'); ws.close(1000); } catch {}
+});
+// Brought back from the back/forward cache after leaving: it stays dead.
+addEventListener('pageshow', (e) => {
+  if (e.persisted && ended) { setEnabled(false); setPeer(false, 'ended'); addSys('you left — this link is now closed'); }
+});
+
+function alarm(report) {
+  if (ended) return;
+  ended = true; forget();
+  if (engine) engine.destroy();
+  $('alarm').classList.add('show');
+  const k = $('keyIcon'); k.classList.remove('verified'); k.classList.add('alarm'); $('keyLbl').textContent = 'keys changed';
+  setPeer(false, 'keys changed'); setEnabled(false); msgEl.placeholder = 'session ended — keys changed';
+  for (const c of cards.values()) c.failed('session ended: tampering detected');
+  say('Keys changed. The session is self-destructing.');
+  if (report && ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'tamper' }));
+}
+
+// ---- file cards ----
+const cards = new Map();
+function cardFor(v) { return cards.get(v.id) || NULL_CARD; }
+const NULL_CARD = { progress() {}, state() {}, done() {}, failed() {} };
+
+function baseCard(side, v) {
+  const row = el('div', 'row ' + side), card = el('div', 'fcard');
+  card.setAttribute('role', 'group'); card.setAttribute('aria-label', (side === 'me' ? 'Outgoing file ' : 'Incoming file ') + v.name);
+  const head = el('div', 'fhead'), ic = el('div', 'ficon'); ic.appendChild(icon(TYPE_ICON[v.type] || 'file'));
+  const info = el('div');
+  info.appendChild(el('div', 'fname', v.name));
+  const meta = el('div', 'fmeta'); meta.append(mib(v.size) + ' · ' + FT.LABEL[v.type] + ' · ');
+  const code = el('code', null, v.sha256.slice(0, 8)); code.title = 'SHA-256 fingerprint — compare with the sender'; meta.appendChild(code);
+  info.appendChild(meta);
+  if (v.stripped) info.appendChild(el('span', 'tag', 'photo metadata removed'));
+  head.append(ic, info);
+  const body = el('div'), actions = el('div', 'actions');
+  card.append(head, body, actions); row.appendChild(card); stream.appendChild(row); scroll();
+  const bar = el('div', 'bar'), fill = el('span'); bar.appendChild(fill);
+  bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', 'Transfer progress'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100');
+  const prog = el('div', 'fprog');
+  let t0 = 0, b0 = 0, rate = 0, lastSay = 0;
+  const c = {
+    row, card, body, actions,
+    setBody(...nodes) { body.replaceChildren(...nodes); },
+    setActions(...nodes) { actions.replaceChildren(...nodes); },
+    progress(v2) {
+      if (!bar.isConnected) c.setBody(bar, prog);
+      const pct = v2.size ? Math.min(100, Math.floor((v2.bytes / v2.size) * 100)) : 100;
+      const now = performance.now();
+      if (!t0) { t0 = now; b0 = v2.bytes; }
+      else if (now - t0 > 500) { const r = (v2.bytes - b0) / ((now - t0) / 1000); rate = rate ? rate * 0.6 + r * 0.4 : r; t0 = now; b0 = v2.bytes; }
+      fill.style.transform = 'scaleX(' + pct / 100 + ')';
+      bar.setAttribute('aria-valuenow', String(pct));
+      const eta = rate > 0 ? Math.ceil((v2.size - v2.bytes) / rate) : 0;
+      prog.textContent = pct + '%  ' + mib(v2.bytes) + ' / ' + mib(v2.size) + (rate ? '  ·  ' + mib(rate) + '/s' + (eta ? '  ·  ' + eta + 's left' : '') : '');
+      if (now - lastSay > 5000) { lastSay = now; say(v2.name + ': ' + pct + ' percent'); }
+    },
+    state(v2) {
+      if (v2.state === 'paused') prog.textContent = 'paused — reconnecting…';
+      if (v2.state === 'declined') { c.setBody(el('div', 'fmeta', v2.dir === 'out' ? 'They declined' + (v2.reason && v2.reason !== 'declined' ? ' (' + v2.reason + ')' : '') : 'Declined')); c.setActions(); cards.delete(v2.id); }
+      if (v2.state === 'expired') { c.setBody(el('div', 'fmeta', 'Offer expired')); c.setActions(); cards.delete(v2.id); }
+    },
+    failed(why) {
+      const e = el('div', 'ferr'); e.textContent = 'Failed: ' + why;
+      c.setBody(e); c.setActions(); cards.delete(v.id); say('Transfer failed: ' + why);
+    },
+  };
+  cards.set(v.id, c);
+  return c;
+}
+
+function incomingCard(v) {
+  const c = baseCard('peer', v);
+  const notes = [el('div', 'fmeta', 'They want to send you this file. Nothing is downloaded unless you accept.')];
+  if (MOBILE && v.size > 200 * 1024 * 1024) notes.push(el('div', 'fwarn', 'Large file: phones with little memory may not be able to hold it.'));
+  c.setBody(...notes);
+  c.setActions(
+    btn('Accept', 'check', 'primary', () => { c.setActions(); engine.accept(); }),
+    btn('Decline', 'x', '', () => { c.setActions(); engine.decline(); }),
+  );
+  say('Incoming file offer: ' + v.name + ', ' + mib(v.size));
+  c.done = (v2, blob) => {
+    const fname = v2.name;
+    const save = () => {
+      const url = URL.createObjectURL(blob);
+      const a = el('a'); a.href = url; a.download = fname; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    };
+    const ok = el('div', 'fok'); ok.append(icon('check'), 'Received and verified — fingerprint matches');
+    const nodes = [ok];
+    if (v2.type === 'png' || v2.type === 'jpeg') {         // images only; never PDF/MP4/TXT inline
+      const img = el('img', 'preview'); img.alt = 'Preview of ' + fname;
+      const purl = URL.createObjectURL(new Blob([blob], { type: v2.type === 'png' ? 'image/png' : 'image/jpeg' }));
+      img.src = purl; img.onload = img.onerror = () => URL.revokeObjectURL(purl);
+      nodes.push(img);
+    }
+    c.setBody(...nodes);
+    c.setActions(btn('Save file', 'down', 'primary', save));
+    cards.delete(v2.id);
+    say(fname + ' received and verified.');
+    save();
+  };
+}
+
+function outgoingCard(v) {
+  const c = cards.get('pending') || baseCard('me', v);
+  if (cards.get('pending')) { cards.delete('pending'); cards.set(v.id, c); }
+  c.setBody(el('div', 'fmeta', 'Waiting for them to accept…'));
+  c.setActions(btn('Cancel', 'x', '', () => engine.cancel()));
+  c.done = () => {
+    const ok = el('div', 'fok'); ok.append(icon('check'), 'Delivered — they verified the fingerprint');
+    c.setBody(ok); c.setActions(); cards.delete(v.id); say(v.name + ' delivered.');
+  };
+}
+
+// ---- choosing a file to send ----
+async function prepare(file, strip, onProgress) {
+  if (file.size > SC.MAX_SIZE) throw new Error('That file is over the 500 MiB limit.');
+  const head = new Uint8Array(await file.slice(0, FT.PDF_WINDOW).arrayBuffer());
+  const type = FT.sniff(head);
+  let mem = null, stripped = false;
+  if (type === 'jpeg' && strip && file.size <= EX.STRIP_LIMIT) {
+    try { mem = EX.strip(new Uint8Array(await file.arrayBuffer())).bytes; stripped = true; }
+    catch { const e = new Error('This photo’s structure is unusual, so its metadata can’t be removed safely. Untick “Remove photo metadata” to send it as-is.'); e.exif = true; throw e; }
+  }
+  const size = mem ? mem.length : file.size;
+  const read = async (i) => {
+    const a = i * SC.CHUNK, len = SC.expectedLen(size, i);
+    if (mem) return mem.subarray(a, a + len);
+    const b = new Uint8Array(await file.slice(a, a + len).arrayBuffer());
+    if (b.length !== len) throw new Error('file changed while sending');
+    return b;
+  };
+  const v = FT.validator(type), h = SHA.create(), total = SC.totalChunks(size);
+  for (let i = 0; i < total; i++) {
+    const b = await read(i);
+    try { v.push(b); } catch { throw new Error(type === 'txt' ? 'Only .txt, .png, .jpg, .mp4 and .pdf files can be sent.' : 'This file’s contents don’t match its type.'); }
+    h.update(b);
+    if (i % 32 === 0) onProgress(i / total);
+  }
+  try { v.finish(); } catch { throw new Error('Only .txt, .png, .jpg, .mp4 and .pdf files can be sent.'); }
+  return { name: NM.cleanName(file.name, type) || 'file' + FT.EXT[type], size, type, sha256: h.hex(), stripped, read, close() { mem = null; } };
+}
+
+function pickFile(file) {
+  if (!file || !engine || !authed) return;
+  if (engine.out && ['offered', 'streaming', 'paused'].includes(engine.out.state)) { addSys('one file at a time — cancel the current one first'); return; }
+  const isJpeg = /\.jpe?g$/i.test(file.name) || file.type === 'image/jpeg';
+  const v = { id: 'pending', name: file.name, size: file.size, type: 'txt', sha256: '········', stripped: false };
+  const old = cards.get('pending'); if (old) old.row.remove();
+  const c = baseCard('me', v);
+  c.card.querySelector('.fmeta').textContent = mib(file.size) + ' · checking…';
+  const cb = el('input'); cb.type = 'checkbox'; cb.checked = true;
+  const lab = el('label', 'check'); lab.append(cb, 'Remove photo metadata (location, camera)');
+  const go = async () => {
+    c.setActions();
+    const status = el('div', 'fprog', 'Checking and fingerprinting…');
+    c.setBody(status);
+    try {
+      const src = await prepare(file, cb.checked, (f) => { status.textContent = 'Checking and fingerprinting… ' + Math.floor(f * 100) + '%'; });
+      c.card.querySelector('.fname').textContent = src.name;
+      c.card.querySelector('.ficon').replaceChildren(icon(TYPE_ICON[src.type]));   // type is known only now
+      const meta = c.card.querySelector('.fmeta'); meta.textContent = mib(src.size) + ' · ' + FT.LABEL[src.type] + ' · ';
+      meta.appendChild(el('code', null, src.sha256.slice(0, 8)));
+      if (src.stripped) c.card.querySelector('.fhead > div:last-child').appendChild(el('span', 'tag', 'photo metadata removed'));
+      await engine.offer(src);
+    } catch (e) {
+      const err = el('div', 'ferr', e.message || String(e));
+      c.setBody(...(isJpeg ? [lab, err] : [err]));
+      c.setActions(...(e.exif ? [btn('Try again', 'send', 'primary', go)] : []), btn('Remove', 'x', '', () => { cards.delete('pending'); c.row.remove(); }));
+    }
+  };
+  c.setBody(...(isJpeg ? [lab] : []));
+  c.setActions(btn('Offer file', 'send', 'primary', go), btn('Remove', 'x', '', () => { cards.delete('pending'); c.row.remove(); }));
+}
+
+attach.addEventListener('click', () => picker.click());
+picker.addEventListener('change', () => { pickFile(picker.files[0]); picker.value = ''; });
+const drop = $('drop'), chatEl = $('chat');
+let dragDepth = 0;
+chatEl.addEventListener('dragenter', (e) => { if (!authed) return; e.preventDefault(); dragDepth++; drop.classList.add('show'); });
+chatEl.addEventListener('dragover', (e) => { if (authed) e.preventDefault(); });
+chatEl.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; drop.classList.remove('show'); } });
+chatEl.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; drop.classList.remove('show'); if (e.dataTransfer.files.length) pickFile(e.dataTransfer.files[0]); });
+
+// ---- chat ----
+$('composer').addEventListener('submit', (e) => { e.preventDefault(); sendChat(); });
+msgEl.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+msgEl.addEventListener('input', () => { msgEl.style.height = 'auto'; msgEl.style.height = Math.min(msgEl.scrollHeight, 120) + 'px'; });
+async function sendChat() {
+  const text = msgEl.value.replace(/\s+$/, '');
+  if (!text || !authed || !engine) return;
+  if (await engine.chat(text)) { addBubble('me', text); msgEl.value = ''; msgEl.style.height = 'auto'; }
+  else addSys('not sent — reconnecting');
+  msgEl.focus();
+}
+
+// ---- safety code modal ----
+let mySafety = '';
+const modal = $('keyModal');
+$('keyIcon').addEventListener('click', () => { if (!mySafety) return; $('kmCode').textContent = mySafety; modal.hidden = false; $('kmClose').focus(); });
+function closeModal() { modal.hidden = true; $('keyIcon').focus(); }
+$('kmClose').addEventListener('click', closeModal);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+// ---- boot ----
+secretB64 = readSecret();
+if (!secretB64) {
+  showNotice('This link is incomplete', 'Open the link exactly as it was sent. Everything after the # is the key — copying only part of it leaves the key behind.');
+} else {
+  ss.set(STORE, secretB64);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch {}
+  $('chat').classList.add('open');
+  connect();
+}
+globalThis.__ftproxyPage = { get engine() { return engine; }, get authed() { return authed; }, pickFile };   // test hook (read-only)
+})();
+</script>
+</body>
+</html>

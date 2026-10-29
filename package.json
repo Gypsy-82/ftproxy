@@ -1,0 +1,29 @@
+{
+  "name": "ftproxy",
+  "version": "0.1.0",
+  "description": "Private, end-to-end-encrypted 1:1 file transfer you host yourself. Host runs a terminal; the guest taps one self-destructing link. Zero runtime dependencies.",
+  "author": "Michael <262953538+Gypsy-82@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Gypsy-82/ftproxy.git"
+  },
+  "homepage": "https://github.com/Gypsy-82/ftproxy#readme",
+  "bugs": {
+    "url": "https://github.com/Gypsy-82/ftproxy/issues"
+  },
+  "type": "commonjs",
+  "bin": {
+    "ftproxy": "bin/ftproxy.js"
+  },
+  "scripts": {
+    "start": "node bin/ftproxy.js",
+    "test": "node --test --test-concurrency=1 --test-timeout=120000 'test/*.test.js'"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "ws": "^8.22.0"
+  },
+  "license": "MIT"
+}
